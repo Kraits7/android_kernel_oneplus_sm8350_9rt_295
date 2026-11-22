@@ -95,6 +95,7 @@ jobs:
           bash ksu_setup.sh "$KSU_TAG"
 
           # Fix KernelSU UAPI version for manager compatibility (set to 6)
+          # Fix KernelSU UAPI version for manager v3.4.2 (set to 5)
           SUPERCALL_H=""
           if [ -f "drivers/kernelsu/kernel/uapi/supercall.h" ]; then
             SUPERCALL_H="drivers/kernelsu/kernel/uapi/supercall.h"
@@ -105,8 +106,8 @@ jobs:
           fi
 
           if [ -n "$SUPERCALL_H" ] && [ -f "$SUPERCALL_H" ]; then
-            echo "Patching KERNEL_SU_UAPI_VERSION to 6 in $SUPERCALL_H"
-            sed -i -E 's/(KERNEL_SU_UAPI_VERSION\s*=\s*)[0-9]+/\16/' "$SUPERCALL_H"
+            echo "Patching KERNEL_SU_UAPI_VERSION to 5 in $SUPERCALL_H"
+            sed -i -E 's/(KERNEL_SU_UAPI_VERSION\s*=\s*)[0-9]+/\15/' "$SUPERCALL_H"
             grep -n "KERNEL_SU_UAPI_VERSION" "$SUPERCALL_H" || true
           else
             echo "Warning: supercall.h not found under drivers/kernelsu"
