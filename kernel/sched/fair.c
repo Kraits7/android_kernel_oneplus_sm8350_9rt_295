@@ -110,7 +110,7 @@ static unsigned int normalized_sysctl_sched_latency	= 6000000ULL;
  * factor. A shorter slice pulls the virtual deadline in, so pick_eevdf()
  * prefers them over background work on wakeup. 1 disables the behaviour.
  */
-unsigned int sysctl_sched_ux_slice_divisor		= 2;
+unsigned int sysctl_sched_ux_slice_divisor		= 1;
 
 unsigned int sysctl_sched_base_slice			= 750000ULL;
 
@@ -7785,15 +7785,20 @@ int find_energy_efficient_cpu(struct task_struct *p, int prev_cpu,
 
 unlock:
 	rcu_read_unlock();
-
+	
 	/*
 	 * Pick the prev CPU, if best energy CPU can't saves at least 6% of
-	 * the energy used by prev_cpu.
+	 * the energy used by prev_cpu (or ~3% for UX tasks).
 	 */
 	if (!(idle_cpu(best_energy_cpu) &&
 	    idle_get_state_idx(cpu_rq(best_energy_cpu)) <= 0) &&
 	    (prev_delta != ULONG_MAX) && (best_energy_cpu != prev_cpu)  &&
+#if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
+	    ((test_task_ux(p) ? ((prev_delta - best_delta) <= prev_delta >> 5)
+			       : ((prev_delta - best_delta) <= prev_delta >> 4))) &&
+#else
 	    ((prev_delta - best_delta) <= prev_delta >> 4) &&
+#endif
 	    (capacity_orig_of(prev_cpu) <= capacity_orig_of(start_cpu)))
 		best_energy_cpu = prev_cpu;
 
