@@ -561,17 +561,22 @@ static unsigned int entity_slice(struct sched_entity *se)
 		return sysctl_sched_base_slice;
 
 	p = task_of(se);
-	if (p->latency_nice)
-		return sched_latency_nice_to_slice(p->latency_nice);
 
 #if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
 	if (sysctl_sched_ux_slice_divisor > 1 && test_task_ux(p)) {
 		unsigned int slice = sysctl_sched_base_slice /
 				     sysctl_sched_ux_slice_divisor;
 
-		return max(slice, 100000U);
+		if (p->latency_nice)
+			return min(slice, sched_latency_nice_to_slice(p->latency_nice));
+
+		return max(slice, 500000U);
 	}
 #endif
+
+	if (p->latency_nice)
+		return sched_latency_nice_to_slice(p->latency_nice);
+
 	return sysctl_sched_base_slice;
 }
 
@@ -4568,19 +4573,14 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 	if (sched_feat(PLACE_DEADLINE_INITIAL) && (flags & ENQUEUE_INITIAL))
 		vslice /= 2;
 
-	se->deadline = se->vruntime + vslice;
-
 #ifdef CONFIG_SCHED_WALT
 	if (entity_is_task(se)) {
 		if (per_task_boost(task_of(se)) == TASK_BOOST_STRICT_MAX) {
 			se->vruntime -= calc_delta_fair(sysctl_sched_latency, se);
-			se->vruntime -= calc_delta_fair(sysctl_sched_latency, se);
-			se->deadline = se->vruntime + vslice;
-			return;
+			goto out_deadline;
 		} else if (walt_binder_low_latency_task(task_of(se))) {
 			se->vruntime -= calc_delta_fair(sysctl_sched_latency, se);
-			se->deadline = se->vruntime + vslice;
-			return;
+			goto out_deadline;
 		} else if (task_rtg_high_prio(task_of(se)) ||
 				walt_procfs_low_latency_task(task_of(se))) {
 			unsigned long thresh = sysctl_sched_latency;
@@ -4588,8 +4588,7 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 			if (sched_feat(GENTLE_FAIR_SLEEPERS))
 				thresh >>= 1;
 			se->vruntime -= calc_delta_fair(thresh, se);
-			se->deadline = se->vruntime + vslice;
-			return;
+			goto out_deadline;
 		}
 	}
 #endif
@@ -4599,6 +4598,9 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int flags)
 #ifdef CONFIG_OPLUS_FEATURE_VT_CAP
 	android_rvh_place_entity_handler(NULL, cfs_rq, se, flags, &vruntime);
 #endif
+
+out_deadline:
+	se->deadline = se->vruntime + vslice;
 }
 
 static void check_enqueue_throttle(struct cfs_rq *cfs_rq);
@@ -4817,7 +4819,6 @@ set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 		update_stats_wait_end(cfs_rq, se);
 		__dequeue_entity(cfs_rq, se);
 		update_load_avg(cfs_rq, se, UPDATE_TG);
-		se->vlag = se->deadline;
 	}
 
 	update_stats_curr_start(cfs_rq, se);
