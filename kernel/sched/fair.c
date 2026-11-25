@@ -8178,9 +8178,6 @@ wakeup_preempt_entity(struct sched_entity *curr, struct sched_entity *se)
 	struct cfs_rq *cfs_rq = cfs_rq_of(curr);
 	struct sched_entity *best = pick_eevdf(cfs_rq);
 
-	if (entity_is_task(se) && test_task_ux(task_of(se)))
-		return 1;
-
 	if (!best || best == curr)
 		return 0;
 
