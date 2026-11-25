@@ -210,9 +210,9 @@ jobs:
         with:
           name: KernelSU_Next_9rt-Docker
           path: |
-            boot-KraitsKernel-WithoutTWRP-Docker-${{ env.BUILD_DATE }}.img
-            boot-KraitsKernel-Docker-${{ env.BUILD_DATE }}.img
-            KraitsKernel-Docker-${{ env.BUILD_DATE }}.zip
+            boot-KernelSU_Next-9rt-test-WithoutTWRP-Docker-${{ env.BUILD_DATE }}.img
+            boot-KernelSU-Next-9rt-test-Docker-${{ env.BUILD_DATE }}.img
+            KernelSU-Next-9rt-test-Docker-${{ env.BUILD_DATE }}.zip
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
