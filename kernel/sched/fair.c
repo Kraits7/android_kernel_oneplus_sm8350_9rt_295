@@ -570,7 +570,7 @@ static unsigned int entity_slice(struct sched_entity *se)
 		if (p->latency_nice)
 			return min(slice, sched_latency_nice_to_slice(p->latency_nice));
 
-		return max(slice, 500000U);
+		return max(slice, 100000U);
 	}
 #endif
 
@@ -6738,7 +6738,7 @@ select_idle_capacity(struct task_struct *p, struct sched_domain *sd, int target)
 		unsigned long cpu_cap = capacity_of(cpu);
 
 		if ((!available_idle_cpu(cpu) && !sched_idle_cpu(cpu)) ||
-				cpu_isolated(target))
+				cpu_isolated(cpu))
 			continue;
 		if (fits_capacity(task_util, cpu_cap))
 			return cpu;
@@ -7048,7 +7048,7 @@ static void walt_get_indicies(struct task_struct *p, int *order_index,
 
 #ifdef CONFIG_OPLUS_FEATURE_ABNORMAL_FLAG
 	if (!test_task_ux(p)) {
-		if ((check_abnormal_freq(p) && check_abnormal_task_util(p) && check_abnormal_cpu_util()) || p->abnormal_flag > ABNORMAL_THRESHOLD)
+		if (check_abnormal_freq(p) && check_abnormal_task_util(p) && check_abnormal_cpu_util())
 			*order_index = 0;
 	}
 #endif
@@ -8178,6 +8178,9 @@ wakeup_preempt_entity(struct sched_entity *curr, struct sched_entity *se)
 	struct cfs_rq *cfs_rq = cfs_rq_of(curr);
 	struct sched_entity *best = pick_eevdf(cfs_rq);
 
+	if (entity_is_task(se) && test_task_ux(task_of(se)))
+		return 1;
+
 	if (!best || best == curr)
 		return 0;
 
@@ -8896,10 +8899,6 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 			return 0;
 	}
 #endif
-	/* Disregard pcpu kthreads; they are where they need to be. */
-	if (kthread_is_per_cpu(p))
-		return 0;
-
 	/* Disregard pcpu kthreads; they are where they need to be. */
 	if (kthread_is_per_cpu(p))
 		return 0;
